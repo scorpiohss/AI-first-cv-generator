@@ -1,0 +1,182 @@
+{
+  "name": "CV Generator V3 - AI Agents",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cv-generator-v3",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://raw.githubusercontent.com/scorpiohss/ai-first-cv-generator/main/data/master-career-data.md",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "fetch-master-data",
+      "name": "Fetch Master Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4",
+          "mode": "list"
+        },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are an elite CFO career strategist analyzing job fit for PE and Fortune 500 roles."
+            },
+            {
+              "role": "user", 
+              "content": "=HARDEEP'S FULL PROFILE:\n{{ $('Fetch Master Data').item.json }}\n\nJOB DESCRIPTION:\n{{ $('Webhook').item.json.body.jobDescription }}\n\nAnalyze:\n1. What they REALLY need (read between lines)\n2. Which of Hardeep's experiences are most relevant\n3. What story positions him best\n4. Red flags to address\n5. Match strength (0-100)\n\nReturn JSON with:\n{\n  \"match_score\": 0-100,\n  \"positioning_strategy\": \"2 sentences max\",\n  \"top_3_companies\": [\"company1\", \"company2\", \"company3\"],\n  \"key_achievements\": [\"achievement1\", \"achievement2\", \"achievement3\", \"achievement4\", \"achievement5\"],\n  \"opening_hook\": \"one powerful line\",\n  \"concerns\": \"potential disqualifiers\"\n}"
+            }
+          ]
+        },
+        "simplifyOutput": true,
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "id": "strategist",
+      "name": "STRATEGIST",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.3,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4",
+          "mode": "list"
+        },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You write CVs that PE partners and Fortune 500 boards read in full. The 6-second rule is everything."
+            },
+            {
+              "role": "user",
+              "content": "=POSITIONING STRATEGY:\n{{ $json }}\n\nJOB DESCRIPTION:\n{{ $('Webhook').item.json.body.jobDescription }}\n\nFULL BACKGROUND:\n{{ $('Fetch Master Data').item.json }}\n\nWrite a CV that:\n1. Opens with {{ $json.opening_hook }}\n2. Leads with experiences from {{ $json.top_3_companies }}\n3. Emphasizes these achievements: {{ $json.key_achievements }}\n4. Demonstrates pattern: Big-4 → PE → Exits → Value Creation\n5. Shows IQ 151 through complexity handled, not stated\n\nFormat:\n# HARDEEP SINGH SODHI\n[Contact details]\n\n## EXECUTIVE SUMMARY\n[2-3 powerful sentences using the positioning strategy]\n\n## EXPERIENCE\n[5 most relevant roles with 3-4 bullets each]\n\n## EDUCATION\n[Relevant only]\n\nKeep under 2 pages. Every word must earn its place."
+            }
+          ]
+        },
+        "simplifyOutput": true,
+        "options": {
+          "temperature": 0.4,
+          "maxTokens": 2500
+        }
+      },
+      "id": "writer",
+      "name": "WRITER",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.3,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4",
+          "mode": "list"
+        },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You evaluate CVs from two perspectives: ATS scanner for keywords, and cynical PE partner with 30 seconds to decide."
+            },
+            {
+              "role": "user",
+              "content": "=CV TO EVALUATE:\n{{ $json }}\n\nORIGINAL JOB DESCRIPTION:\n{{ $('Webhook').item.json.body.jobDescription }}\n\nScore:\n1. ATS match (0-100) - keyword coverage\n2. PE interest (0-100) - would I call this person?\n3. Decision: PASS or REVISE\n4. If REVISE, exactly what to fix\n\nReturn JSON:\n{\n  \"ats_score\": 0-100,\n  \"pe_score\": 0-100,\n  \"decision\": \"PASS or REVISE\",\n  \"revision_notes\": \"specific fixes if REVISE\",\n  \"strengths\": \"what works well\"\n}"
+            }
+          ]
+        },
+        "simplifyOutput": true,
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "critic",
+      "name": "CRITIC",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.3,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ JSON.parse($json).decision }}",
+              "operation": "equals",
+              "value2": "PASS"
+            }
+          ]
+        }
+      },
+      "id": "router",
+      "name": "Check Decision",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "response",
+      "name": "Return CV",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1450, 250]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "Fetch Master Data", "type": "main", "index": 0}]]
+    },
+    "Fetch Master Data": {
+      "main": [[{"node": "STRATEGIST", "type": "main", "index": 0}]]
+    },
+    "STRATEGIST": {
+      "main": [[{"node": "WRITER", "type": "main", "index": 0}]]
+    },
+    "WRITER": {
+      "main": [[{"node": "CRITIC", "type": "main", "index": 0}]]
+    },
+    "CRITIC": {
+      "main": [[{"node": "Check Decision", "type": "main", "index": 0}]]
+    },
+    "Check Decision": {
+      "main": [
+        [{"node": "Return CV", "type": "main", "index": 0}],
+        [{"node": "WRITER", "type": "main", "index": 0}]
+      ]
+    }
+  }
+}
