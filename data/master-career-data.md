@@ -6,7 +6,7 @@
 ---
 
 ## CONTACT & IDENTITY
-- **Name:** Hardeep Singh Sodhi (Hardeep Selhi)
+- **Name:** Hardeep Singh Selhi (Hardeep Selhi)
 - **Email:** h.selhi@fairview.link
 - **Phone:** +31 652027735
 - **Location:** Almere, Netherlands
